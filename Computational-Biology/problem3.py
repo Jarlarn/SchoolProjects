@@ -26,7 +26,7 @@ for R in R_values:
 R_plot = np.repeat(R_values, last)
 eta_plot = np.concatenate(etas)
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(16, 6))
 plt.scatter(R_plot, eta_plot, s=2, color="k", alpha=0.5)
 plt.xlabel("R")
 plt.ylabel(r"$\eta$ (adults)")
@@ -36,8 +36,7 @@ plt.savefig("ricker_bifurcation.png")
 plt.show()
 
 # --- (b) Population dynamics for representative R values ---
-# Choose R values for: fixed point, 2-cycle, 3-cycle, 4-cycle
-R_reps = [2, 18.5, 20.5, 22.5]
+R_reps = [2, 10.0, 22.5, 13.5]
 labels = ["Stable fixed point", "2-point cycle", "3-point cycle", "4-point cycle"]
 plt.figure(figsize=(12, 8))
 for R, label in zip(R_reps, labels):
@@ -51,8 +50,20 @@ plt.tight_layout()
 plt.savefig("ricker_representative_dynamics.png")
 plt.show()
 
+
+def detect_cycle_length(eta, tol=1e-6):
+    unique_vals = np.unique(np.round(eta, decimals=6))
+    return len(unique_vals)
+
+
+for R in R_reps:
+    eta = ricker_map(R, alpha, eta0, generations)
+    cycle_length = detect_cycle_length(eta[-last:])
+    print(f"Cycle length for R={R}: {cycle_length}")
+
+
 # --- (d) Zoom in to estimate R_infty ---
-R_zoom = np.arange(22, 23, 0.001)
+R_zoom = np.arange(14.6, 15, 0.001)
 etas_zoom = []
 for R in R_zoom:
     eta = ricker_map(R, alpha, eta0, generations)
@@ -70,6 +81,27 @@ plt.tight_layout()
 plt.savefig("ricker_bifurcation_zoom.png")
 plt.show()
 
-# Estimate R_infty visually from the plot
-R_infty_est = 22.6
-print(f"Estimated R_infty (onset of chaos): {R_infty_est}")
+cycle_lengths = []
+
+for R in R_zoom:
+    eta = ricker_map(R, alpha, eta0, generations)
+    cycle_len = detect_cycle_length(eta[-last:])
+    cycle_lengths.append(cycle_len)
+
+# Plot cycle length vs R
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(10, 4))
+plt.plot(R_zoom, cycle_lengths, ".-")
+plt.xlabel("R")
+plt.ylabel("Number of unique points (cycle length)")
+plt.title("Numerical check for period-doubling and chaos")
+plt.tight_layout()
+plt.savefig("ricker_cycle_length_check.png")
+plt.show()
+
+# Print R values where cycle length jumps (indicative of bifurcations)
+for R, cl in zip(R_zoom, cycle_lengths):
+    if cl > 16:  # Arbitrary threshold for chaos
+        print(f"Possible onset of chaos at R ≈ {R:.3f} (cycle length: {cl})")
+        break
