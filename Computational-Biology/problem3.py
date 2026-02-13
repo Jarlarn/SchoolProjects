@@ -63,7 +63,7 @@ for R in R_reps:
 
 
 # --- (d) Zoom in to estimate R_infty ---
-R_zoom = np.arange(14.6, 15, 0.001)
+R_zoom = np.arange(13, 17, 0.001)
 etas_zoom = []
 for R in R_zoom:
     eta = ricker_map(R, alpha, eta0, generations)
