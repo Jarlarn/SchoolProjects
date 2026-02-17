@@ -101,8 +101,8 @@ def arma_predict_one_step(phi, theta, mu, data):
     y_hat = np.zeros(n)
 
     for t in range(max(p, q)):
-        y_hat[t] = mu
-        eps[t] = data[t] - y_hat[t]
+        y_hat[t] = data[t]
+        eps[t] = 0
 
     for t in range(max(p, q), n):
         ar_part = 0.0
@@ -144,8 +144,8 @@ for p in range(1, 5):
             )
             phi = result.x[:p]
             theta = result.x[p : p + q]
-            pred = arma_predict_one_step(phi, theta, mu, test_data)
-            rmse = np.sqrt(np.mean((test_data - pred) ** 2))
+            pred = arma_predict_one_step(phi, theta, mu, validation_data)
+            rmse = np.sqrt(np.mean((validation_data - pred) ** 2))
             print(f"p={p}, q={q}, RMSE={rmse}")
             if rmse < best_rmse:
                 best_rmse = rmse
@@ -161,11 +161,13 @@ print(f"\nBest (p, q): ({best_p}, {best_q}) with RMSE: {best_rmse}")
 print("Best phi:", best_phi)
 print("Best theta:", best_theta)
 
+test_pred = arma_predict_one_step(best_phi, best_theta, mu, test_data)
+
 # Plot the best result
 plt.figure(figsize=(12, 5))
 plt.plot(test_data, label="Test Data", color="blue")
 plt.plot(
-    best_pred, label=f"Best ARMA({best_p},{best_q}) Fit", color="red", linestyle="--"
+    test_pred, label=f"Best ARMA({best_p},{best_q}) Fit", color="red", linestyle="--"
 )
 plt.title(f"Test Data vs Best ARMA({best_p},{best_q}) Fit  |  RMSE = {best_rmse:.4f}")
 plt.xlabel("Time step")
@@ -174,3 +176,61 @@ plt.legend()
 plt.tight_layout()
 plt.savefig("task2_arma_best_fit.png")
 plt.show()
+
+
+#### Plotting
+# def acf(x, nlags):
+#     x = list(x)
+#     n = len(x)
+#     mean = sum(x) / n
+#     acf_vals = []
+#     for k in range(nlags + 1):
+#         numerator = 0.0
+#         denominator = 0.0
+#         for t in range(k, n):
+#             numerator += (x[t] - mean) * (x[t - k] - mean)
+#         for t in range(n):
+#             denominator += (x[t] - mean) ** 2
+#         acf_vals.append(numerator / denominator)
+#     return acf_vals
+
+
+# def pacf(x, nlags):
+#     x = np.array(x)
+#     pacf_vals = [1.0]
+#     for k in range(1, nlags + 1):
+#         X = []
+#         y = []
+#         for t in range(k, len(x)):
+#             X.append([x[t - i - 1] for i in range(k)])
+#             y.append(x[t])
+#         X = np.array(X)
+#         y = np.array(y)
+#         if len(X) > 0:
+#             coef = np.linalg.lstsq(X, y, rcond=None)[0]
+#             pacf_vals.append(coef[-1])
+#         else:
+#             pacf_vals.append(0.0)
+#     return pacf_vals
+
+
+# nlags = 20
+# acf_vals = acf(training_data, nlags)
+# pacf_vals = pacf(training_data, nlags)
+
+# plt.figure(figsize=(12, 5))
+# plt.subplot(1, 2, 1)
+# plt.stem(range(nlags + 1), acf_vals)
+# plt.title("ACF (Training Data)")
+# plt.xlabel("Lag")
+# plt.ylabel("Autocorrelation")
+
+# plt.subplot(1, 2, 2)
+# plt.stem(range(nlags + 1), pacf_vals)
+# plt.title("PACF (Training Data)")
+# plt.xlabel("Lag")
+# plt.ylabel("Partial Autocorrelation")
+
+# plt.tight_layout()
+# plt.savefig("acf_pacf_training.png")
+# plt.show()
