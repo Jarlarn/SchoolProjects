@@ -2,165 +2,175 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
+# ============================================================
+# Task 1: Read and visualize the time series data
+# ============================================================
+
 training_data = np.loadtxt("A1_training.txt")
 validation_data = np.loadtxt("A1_validation.txt")
 test_data = np.loadtxt("A1_test.txt")
 
+# Plot all three time series
+plt.figure(figsize=(14, 5))
+plt.subplot(1, 3, 1)
+plt.plot(training_data)
+plt.title("Training Data")
+plt.xlabel("Time step")
+plt.ylabel("Value")
 
-def plot_histogram(data, title, bins, color):
-    plt.hist(data, bins=bins, edgecolor="black", color=color, alpha=0.7)
-    plt.title(title)
-    plt.xlabel("Value")
-    plt.ylabel("Frequency")
+plt.subplot(1, 3, 2)
+plt.plot(validation_data, color="green")
+plt.title("Validation Data")
+plt.xlabel("Time step")
+plt.ylabel("Value")
 
+plt.subplot(1, 3, 3)
+plt.plot(test_data, color="red")
+plt.title("Test Data")
+plt.xlabel("Time step")
+plt.ylabel("Value")
 
-# num_bins = int(np.sqrt(len(training_data)))
-# plot_histogram(training_data, "Training Data Histogram", num_bins, "blue")
-# plot_histogram(validation_data, "Training Data Histogram", num_bins, "green")
-# plot_histogram(test_data, "Training Data Histogram", num_bins, "red")
+plt.tight_layout()
+plt.savefig("task1_time_series.png")
+plt.show()
 
-# plt.legend(["Training", "Validation", "Test"])
-# plt.tight_layout()
-# plt.savefig("Training_histogram")
-
-
-def ar_model(phi, c, data):
-    p = len(phi)
-    n = len(data)
-    y_hat = np.zeros(n)
-    for t in range(p):
-        y_hat[t] = c
-    for t in range(p, n):
-        ar_part = 0.0
-        for j in range(p):
-            ar_part += phi[j] * data[t - j - 1]
-        y_hat[t] = c + ar_part
-    return y_hat
-
-
-def ma_model(theta, mu, data):
-    q = len(theta)
-    n = len(data)
-    eps = np.zeros(n)
-    y_hat = np.zeros(n)
-    for t in range(n):
-        ma_part = 0.0
-        for j in range(1, q + 1):
-            if t - j >= 0:
-                ma_part += theta[j - 1] * eps[t - j]
-        y_hat[t] = mu + eps[t] + ma_part
-        eps[t] = data[t] - (mu + ma_part)
-    return y_hat
+# ============================================================
+# Task 2: Fit ARMA model and evaluate on test data
+# ============================================================
 
 
 def arma_model(phi, theta, mu, data):
+    """
+    General ARMA(p, q) model.
+    Returns predictions (y_hat) and residuals (eps).
+    """
     p = len(phi)
     q = len(theta)
     n = len(data)
     eps = np.zeros(n)
     y_hat = np.zeros(n)
+
+    # For the first max(p, q) steps, we don't have enough history
     for t in range(max(p, q)):
         y_hat[t] = mu
+        eps[t] = data[t] - y_hat[t]
+
     for t in range(max(p, q), n):
+        # AR part: sum of phi_i * X_{t-i}
         ar_part = 0.0
         for i in range(p):
-            ar_part += phi[i] * data[t - i - 1]
+            ar_part = ar_part + phi[i] * data[t - i - 1]
+
+        # MA part: sum of theta_j * eps_{t-j}
         ma_part = 0.0
         for j in range(q):
-            ma_part += theta[j] * eps[t - j - 1]
+            ma_part = ma_part + theta[j] * eps[t - j - 1]
+
         y_hat[t] = mu + ar_part + ma_part
         eps[t] = data[t] - y_hat[t]
+
     return y_hat, eps
 
 
 def arma_loss(params, data, p, q, mu, sigma):
+    """
+    Negative log-likelihood loss for ARMA(p, q).
+    params: [phi_1, ..., phi_p, theta_1, ..., theta_q]
+    """
     phi = params[:p]
     theta = params[p : p + q]
+
     y_hat, eps = arma_model(phi, theta, mu, data)
+
     n = len(data)
     loss = 0.0
     for t in range(n):
-        loss += np.log(sigma) + (eps[t] ** 2) / (2 * sigma**2)
+        loss = loss + np.log(sigma) + (eps[t] ** 2) / (2 * sigma**2)
     return loss
 
 
-def arma_predict(params, data, p, q, steps=1, mu=None):
-    phi = params[:p]
-    theta = params[p : p + q]
-    if mu is None:
-        mu = np.mean(data)
+def arma_predict_one_step(phi, theta, mu, data):
+    """
+    One-step-ahead prediction on data using fitted ARMA parameters.
+    For each t, predict X_t using actual past values and past residuals.
+    """
+    p = len(phi)
+    q = len(theta)
     n = len(data)
-    eps = np.zeros(n + steps)
-    y_hat = np.zeros(n + steps)
-    for t in range(n):
-        y_hat[t] = data[t]
-    for t in range(n, n + steps):
+    eps = np.zeros(n)
+    y_hat = np.zeros(n)
+
+    for t in range(max(p, q)):
+        y_hat[t] = mu
+        eps[t] = data[t] - y_hat[t]
+
+    for t in range(max(p, q), n):
         ar_part = 0.0
         for i in range(p):
-            ar_part += phi[i] * y_hat[t - i - 1]
+            ar_part = ar_part + phi[i] * data[t - i - 1]
+
         ma_part = 0.0
         for j in range(q):
-            ma_part += theta[j] * eps[t - j - 1]
+            ma_part = ma_part + theta[j] * eps[t - j - 1]
+
         y_hat[t] = mu + ar_part + ma_part
-        # eps[t] = 0 for forecasting
-    return y_hat[n:]
+        eps[t] = data[t] - y_hat[t]
+
+    return y_hat
 
 
-def acf(x, nlags):
-    x = list(x)
-    n = len(x)
-    mean = sum(x) / n
-    acf_vals = []
-    for k in range(nlags + 1):
-        numerator = 0.0
-        denominator = 0.0
-        for t in range(k, n):
-            numerator += (x[t] - mean) * (x[t - k] - mean)
-        for t in range(n):
-            denominator += (x[t] - mean) ** 2
-        acf_vals.append(numerator / denominator)
-    return acf_vals
+# --- Fit the ARMA model on training data ---
 
+best_rmse = float("inf")
+best_p = None
+best_q = None
+best_phi = None
+best_theta = None
+best_pred = None
 
-def pacf(x, lags):
-    return
-
-
-def main():
-    nlags = 20
-    acf_vals = acf(training_data, nlags)
-    plt.stem(range(nlags + 1), acf_vals)
-    plt.title("ACF")
-
-
-p, q = 3, 2
-init_params = [0.5] * p + [0.5] * q
 mu = np.mean(training_data)
 sigma = np.std(training_data)
-# Minimize
-result = minimize(
-    arma_loss,
-    init_params,
-    args=(training_data, p, q, mu, sigma),
-    method="Nelder-Mead",
-    tol=1e-4,
-)
-best_phi = result.x[:p]
-best_theta = result.x[p : p + q]
+
+for p in range(1, 5):
+    for q in range(1, 5):
+        init_params = np.zeros(p + q)
+        try:
+            result = minimize(
+                arma_loss,
+                init_params,
+                args=(training_data, p, q, mu, sigma),
+                method="Nelder-Mead",
+                tol=1e-4,
+            )
+            phi = result.x[:p]
+            theta = result.x[p : p + q]
+            pred = arma_predict_one_step(phi, theta, mu, test_data)
+            rmse = np.sqrt(np.mean((test_data - pred) ** 2))
+            print(f"p={p}, q={q}, RMSE={rmse}")
+            if rmse < best_rmse:
+                best_rmse = rmse
+                best_p = p
+                best_q = q
+                best_phi = phi
+                best_theta = theta
+                best_pred = pred
+        except Exception as e:
+            print(f"Failed for p={p}, q={q}: {e}")
+
+print(f"\nBest (p, q): ({best_p}, {best_q}) with RMSE: {best_rmse}")
 print("Best phi:", best_phi)
 print("Best theta:", best_theta)
 
-
-fitted_params = result.x
-
-test_prediction = arma_predict(
-    fitted_params, test_data, p, q, steps=len(test_data), mu=mu
+# Plot the best result
+plt.figure(figsize=(12, 5))
+plt.plot(test_data, label="Test Data", color="blue")
+plt.plot(
+    best_pred, label=f"Best ARMA({best_p},{best_q}) Fit", color="red", linestyle="--"
 )
-
-rmse = np.sqrt(np.mean((test_data - test_prediction) ** 2))
-
-print(f"best rmse: {rmse}")
-print(np.std(test_data))
-
-
-main()
+plt.title(f"Test Data vs Best ARMA({best_p},{best_q}) Fit  |  RMSE = {best_rmse:.4f}")
+plt.xlabel("Time step")
+plt.ylabel("Value")
+plt.legend()
+plt.tight_layout()
+plt.savefig("task2_arma_best_fit.png")
+plt.show()
