@@ -46,8 +46,8 @@ for i, Tv in enumerate(Tvals_A):
 
 plt.suptitle("Part A — Different Dynamics", fontsize=14)
 plt.tight_layout()
-# plt.savefig("partA.png", dpi=150)
-# plt.show()
+plt.savefig("partA.png", dpi=150)
+plt.show()
 
 print("T = 0.1 : no oscillations (monotone)")
 print("T = 1.5 : damped oscillations")
@@ -78,8 +78,7 @@ print(f"T_damped is {T_damped}")
 # # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def is_sustained(T, tEnd=500, dt=0.1):
-    """Check if oscillations persist in the tail [tEnd-80, tEnd]."""
+def is_sustained(T, tEnd=500, dt=0.01):
     tt, sol = euler_dde(T, tEnd=tEnd, dt=dt)
     mask = tt >= tEnd - 80
     tail = sol[mask]
@@ -87,7 +86,6 @@ def is_sustained(T, tEnd=500, dt=0.1):
     return amp > 10
 
 
-# Bisection over [2, 5]
 TH_lo, TH_hi = 2.0, 5.0
 while TH_hi - TH_lo > 0.1:
     TH_mid = (TH_lo + TH_hi) / 2
