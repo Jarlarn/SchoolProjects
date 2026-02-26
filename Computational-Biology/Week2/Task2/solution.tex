@@ -1,0 +1,227 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{physics}
+\usepackage{bm}
+\geometry{margin=2.5cm}
+
+\title{Problem Set 2, Task 2\\[4pt]
+\large Diffusion-Driven Instability}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Problem statement}
+We consider the Belousov--Zhabotinsky reaction--diffusion system:
+\begin{align}
+\frac{\partial u}{\partial t} &= a - (b+1)u + u^{2}v + D_u\,\nabla^{2}u,\label{eq:u}\\[4pt]
+\frac{\partial v}{\partial t} &= bu - u^{2}v + D_v\,\nabla^{2}v.\label{eq:v}
+\end{align}
+Throughout we use $a = 3$, $b = 8$, $D_u = 1$, and $D_v > 1$.
+
+%% ===================================================================
+\section*{Part (a): Homogeneous steady states and their stability}
+%% ===================================================================
+
+\subsection*{Steady states}
+Neglecting diffusion, we set the time derivatives to zero:
+\begin{align}
+0 &= a - (b+1)u^{*} + (u^{*})^{2}\,v^{*},\label{eq:ss1}\\
+0 &= b\,u^{*} - (u^{*})^{2}\,v^{*}.\label{eq:ss2}
+\end{align}
+From \eqref{eq:ss2} (assuming $u^{*}\neq 0$):
+\[
+v^{*} = \frac{b}{u^{*}}.
+\]
+Substituting into \eqref{eq:ss1}:
+\[
+a - (b+1)u^{*} + (u^{*})^{2}\cdot\frac{b}{u^{*}} = a - (b+1)u^{*} + b\,u^{*} = a - u^{*} = 0,
+\]
+yielding
+\[
+\boxed{u^{*} = a,\qquad v^{*} = \frac{b}{a}.}
+\]
+With the given parameters: $(u^{*},v^{*}) = (3,\;8/3)$.
+
+\subsection*{Linear stability}
+Define $f(u,v) = a-(b+1)u+u^{2}v$ and $g(u,v)=bu-u^{2}v$.
+The Jacobian at the steady state is
+\[
+J = \begin{pmatrix} f_u & f_v \\ g_u & g_v \end{pmatrix}_{(u^*,v^*)}
+= \begin{pmatrix} -(b+1)+2u^{*}v^{*} & (u^{*})^{2} \\ b-2u^{*}v^{*} & -(u^{*})^{2} \end{pmatrix}
+= \begin{pmatrix} b-1 & a^{2} \\ -b & -a^{2} \end{pmatrix}.
+\]
+With $a=3,\;b=8$:
+\[
+J = \begin{pmatrix} 7 & 9 \\ -8 & -9 \end{pmatrix}.
+\]
+\begin{itemize}
+\item \textbf{Trace:}\; $\mathrm{tr}(J) = (b-1)+(-a^{2}) = b-1-a^{2}$.\\
+With our values: $\mathrm{tr}(J) = 7-9 = -2 < 0$.
+\item \textbf{Determinant:}\; $\det(J) = (b-1)(-a^{2}) - a^{2}(-b) = a^{2}[-( b-1)+b] = a^{2}$.\\
+With our values: $\det(J) = 9 > 0$.
+\end{itemize}
+Since $\mathrm{tr}(J)<0$ and $\det(J)>0$, the steady state is \textbf{stable} (both eigenvalues have negative real part).
+
+In general, the steady state $(a,\,b/a)$ is stable if and only if
+\[
+\boxed{b < 1 + a^{2}.}
+\]
+
+%% ===================================================================
+\section*{Part (b): Diffusion-driven (Turing) instability}
+%% ===================================================================
+
+With diffusion, a small perturbation $\sim e^{\sigma t + i\mathbf{k}\cdot\mathbf{r}}$ with wavenumber $k = |\mathbf{k}|$ satisfies the eigenvalue problem
+\[
+\sigma\begin{pmatrix}\delta u\\\delta v\end{pmatrix}
+= \underbrace{\begin{pmatrix} f_u - D_u k^{2} & f_v \\ g_u & g_v - D_v k^{2}\end{pmatrix}}_{J_{k}}
+\begin{pmatrix}\delta u\\\delta v\end{pmatrix}.
+\]
+The steady state is destabilised when $\det(J_{k})<0$ for some $k^{2}>0$ (the trace remains negative since adding diffusion only makes it more negative).
+
+Setting $q = k^{2} \ge 0$:
+\[
+h(q) \;\equiv\; \det(J_k) = D_u D_v\,q^{2}
+- \bigl(f_u D_v + g_v D_u\bigr)\,q + \det(J).
+\]
+With our values ($f_u = b-1 = 7$, $g_v = -a^{2} = -9$, $\det J = a^2 = 9$, $D_u=1$):
+\[
+h(q) = D_v\,q^{2} - (7D_v - 9)\,q + 9.
+\]
+Two conditions are necessary for $h(q)<0$ at some $q>0$:
+\begin{enumerate}
+\item \textbf{Linear coefficient negative} (minimum of $h$ at $q>0$):
+\[
+7D_v - 9 > 0 \quad\Longrightarrow\quad D_v > \frac{9}{7}\approx 1.286.
+\]
+\item \textbf{Discriminant positive} (minimum value $<0$):
+\[
+(7D_v-9)^{2} - 4\cdot D_v\cdot 9 > 0
+\quad\Longrightarrow\quad
+49D_v^{2} - 162\,D_v + 81 > 0.
+\]
+The roots of the quadratic $49D_v^{2}-162\,D_v+81=0$ are
+\[
+D_v = \frac{162 \pm \sqrt{162^{2}-4\cdot 49\cdot 81}}{2\cdot 49}
+= \frac{162 \pm \sqrt{10368}}{98}
+= \frac{162 \pm 72\sqrt{2}}{98}
+= \frac{81 \pm 36\sqrt{2}}{49}.
+\]
+Numerically:
+\[
+D_v^{(-)} = \frac{81-36\sqrt{2}}{49} \approx 0.614,
+\qquad
+D_v^{(+)} = \frac{81+36\sqrt{2}}{49} \approx 2.692.
+\]
+Since $49D_v^{2}-162D_v+81>0$ for $D_v<D_v^{(-)}$ or $D_v>D_v^{(+)}$,
+and condition~1 requires $D_v > 9/7 \approx 1.286 > D_v^{(-)}$,
+the combined requirement is
+\end{enumerate}
+\[
+\boxed{D_v > \frac{81+36\sqrt{2}}{49} \approx 2.692.}
+\]
+Among the four test values $D_v \in \{2.3,\,3,\,5,\,9\}$:
+\begin{itemize}
+\item $D_v = 2.3$: below threshold $\Rightarrow$ \textbf{no Turing instability};
+\item $D_v = 3,\,5,\,9$: above threshold $\Rightarrow$ \textbf{Turing instability occurs}.
+\end{itemize}
+
+%% ===================================================================
+\section*{Part (c): Numerical simulation}
+%% ===================================================================
+
+\subsection*{Numerical method}
+
+The system~\eqref{eq:u}--\eqref{eq:v} is integrated on a square grid of size
+$L\times L = 128\times 128$ with spatial step $\Delta x = 1$ using forward Euler
+time-stepping with $\Delta t = 0.01$:
+\begin{align*}
+u_{i,j}^{n+1} &= u_{i,j}^{n} + \Delta t\left[
+a-(b+1)u_{i,j}^{n}+(u_{i,j}^{n})^{2}\,v_{i,j}^{n}
++ D_u\,(\nabla^{2}u)_{i,j}^{n}
+\right],\\[2pt]
+v_{i,j}^{n+1} &= v_{i,j}^{n} + \Delta t\left[
+b\,u_{i,j}^{n}-(u_{i,j}^{n})^{2}\,v_{i,j}^{n}
++ D_v\,(\nabla^{2}v)_{i,j}^{n}
+\right].
+\end{align*}
+The discrete Laplacian uses the standard five-point stencil with \textbf{periodic
+boundary conditions}:
+\[
+(\nabla^{2}f)_{i,j}
+= \frac{f_{i+1,j}+f_{i-1,j}+f_{i,j+1}+f_{i,j-1}-4\,f_{i,j}}{\Delta x^{2}},
+\]
+where indices wrap around modulo $L$.
+
+\textbf{Initial conditions.} Each grid point is initialised to the homogeneous
+steady state plus a small random perturbation of order $10\%$:
+\[
+u_{i,j}^{0} = u^{*}\bigl(1+0.1\,\xi_{i,j}\bigr),\qquad
+v_{i,j}^{0} = v^{*}\bigl(1+0.1\,\eta_{i,j}\bigr),
+\]
+where $\xi_{i,j},\eta_{i,j}\sim\mathrm{Uniform}(-1,1)$.
+
+The simulation runs for 1\,000 iterations to capture a transient snapshot
+($t=10$), then continues until convergence (maximum absolute change per time
+step $<10^{-6}$) or up to 100\,000 additional iterations.
+
+\subsection*{Results}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{figures/heatmaps.pdf}
+\caption{Heat maps of the concentration~$u$ for four values of~$D_v$.
+Top row: transient state at $t=10$ (1\,000 iterations).
+Bottom row: spatially inhomogeneous steady state.
+All panels share the same colour scale.}
+\label{fig:heatmaps}
+\end{figure}
+
+Figure~\ref{fig:heatmaps} shows heat maps of the $u$-field at a transient time and
+at the (approximate) steady state for each value of $D_v$.
+
+\subsection*{Description of patterns}
+
+\begin{itemize}[leftmargin=1.8em]
+\item \textbf{$D_v = 2.3$} (below threshold): The initial perturbation decays
+and the system relaxes back to the spatially homogeneous steady state
+$(u^{*},v^{*})=(3,\,8/3)$.  No pattern forms, consistent with the analysis
+in part~(b).
+
+\item \textbf{$D_v = 3.0$} (just above threshold): A weak Turing pattern
+emerges with small-amplitude spatial oscillations.  The characteristic
+wavelength is relatively small (many spots/stripes).
+
+\item \textbf{$D_v = 5.0$}: The pattern amplitude is larger and the
+characteristic wavelength increases.  Well-defined spot or labyrinthine
+structures are visible.
+
+\item \textbf{$D_v = 9.0$}: Strong, high-contrast patterns with a large
+characteristic wavelength.  The concentration~$u$ varies over a wide range,
+and the spots/stripes are clearly separated.
+\end{itemize}
+
+\subsection*{Effect of increasing $D_v$}
+
+Increasing $D_v$ (while keeping $D_u=1$ fixed) has two main effects:
+\begin{enumerate}
+\item \textbf{Increased pattern amplitude}: the range of $u$ values grows
+significantly (from nearly zero variation at $D_v=2.3$ to more than an
+order of magnitude at $D_v=9$).
+\item \textbf{Increased characteristic wavelength}: the most-unstable
+wavenumber $k_{\max}$ decreases as $D_v$ grows, because the minimum of
+$h(q)$ shifts to smaller~$q$.  This produces coarser spatial features.
+\end{enumerate}
+Both observations are consistent with the linear stability analysis: larger
+$D_v/D_u$ ratios drive stronger effective ``long-range inhibition,'' amplifying
+the Turing mechanism and selecting longer wavelengths.
+
+\end{document}
