@@ -5,7 +5,7 @@ from matplotlib.animation import FuncAnimation
 # Parameters
 r, K, A, B, D = 0.5, 8, 1, 1, 1
 rho, q = r / A, K / B
-L, dx, dt, T = 100, 1, 0.01, 200
+L, dx, dt, T = 100, 1, 0.01, 40
 steps = int(T / dt)
 
 u1_steady = (q - 1) / 2 + np.sqrt(((q - 1) ** 2) / 4 + (q - (q / rho)))
@@ -107,9 +107,45 @@ def compute_derivative(u, dx):
     return du_dxi
 
 
-# Function to estimate wave velocity c
+def phase_plane_streamplot(ax, c, rho, q, D, u_range=None, v_range=None, density=1.5):
+    if u_range is None:
+        u_range = (-0.5, q * 1.1)
+    if v_range is None:
+        v_range = (-2.0, 2.0)
+
+    U_grid = np.linspace(u_range[0], u_range[1], 200)
+    V_grid = np.linspace(v_range[0], v_range[1], 200)
+    U, V = np.meshgrid(U_grid, V_grid)
+
+    dU = V
+    f_U = rho * U * (1 - U / q) - U / (1 + U)
+    dV = -(c / D) * V - (1 / D) * f_U
+
+    speed = np.sqrt(dU**2 + dV**2)
+    speed[speed == 0] = 1
+
+    ax.streamplot(
+        U_grid,
+        V_grid,
+        dU,
+        dV,
+        color=speed,
+        cmap="coolwarm",
+        density=density,
+        linewidth=0.6,
+        arrowsize=0.8,
+    )
+
+    u_fps = [0.0]
+    u2_fp = (q - 1) / 2 - np.sqrt(((q - 1) ** 2) / 4 + (q - (q / rho)))
+    u1_fp = (q - 1) / 2 + np.sqrt(((q - 1) ** 2) / 4 + (q - (q / rho)))
+    u_fps += [u2_fp, u1_fp]
+    for u_fp in u_fps:
+        if u_range[0] <= u_fp <= u_range[1]:
+            ax.plot(u_fp, 0, "ko", markersize=5, zorder=5)
+
+
 def estimate_wave_velocity(u_init, steps, dx, dt, rho, q, D, xi, u_front):
-    # Choose two time points: t1 (halfway), t2 (end)
     t1 = steps // 2
     t2 = steps
     u = u_init.copy()
@@ -117,7 +153,6 @@ def estimate_wave_velocity(u_init, steps, dx, dt, rho, q, D, xi, u_front):
     front_pos_t2 = None
     for t in range(steps + 1):
         if t == t1:
-            # Find position where u crosses u_front
             idx = np.argmin(np.abs(u - u_front))
             front_pos_t1 = xi[idx]
         if t == t2:
@@ -140,8 +175,53 @@ import re
 
 
 def sanitize_filename(label):
-    # Remove or replace problematic characters for Windows filenames
     return re.sub(r"[^a-zA-Z0-9]", "", label)
+
+
+def classify_fixed_points(c, rho, q, D):
+    """Compute Jacobian eigenvalues at each fixed point and classify."""
+    fixed_points = {"U=0": 0.0, "U=u2*": u2_steady, "U=u1*": u1_steady}
+
+    # f'(U) = ρ(1 - 2U/q) - 1/(1+U)^2
+    def f_prime(U):
+        return rho * (1 - 2 * U / q) - 1 / (1 + U) ** 2
+
+    print("\n" + "=" * 60)
+    print(f"Fixed-point classification  (c = {c:.4f})")
+    print("=" * 60)
+    for name, U_star in fixed_points.items():
+        fp = f_prime(U_star)
+        # Jacobian entries
+        trace = -c / D
+        det = fp / D
+        disc = trace**2 - 4 * det
+        lam1 = (trace + np.sqrt(complex(disc))) / 2
+        lam2 = (trace - np.sqrt(complex(disc))) / 2
+
+        # Classification
+        if det < 0:
+            kind = "Saddle point"
+        elif disc > 0:
+            if trace < 0:
+                kind = "Stable node"
+            elif trace > 0:
+                kind = "Unstable node"
+            else:
+                kind = "Center (degenerate)"
+        else:  # disc <= 0  (complex eigenvalues)
+            if trace < 0:
+                kind = "Stable spiral"
+            elif trace > 0:
+                kind = "Unstable spiral"
+            else:
+                kind = "Center"
+
+        print(f"\n  {name:8s}  (U* = {U_star:+.4f})")
+        print(f"    f'(U*) = {fp:+.4f}")
+        print(f"    tr(J)  = {trace:+.4f},  det(J) = {det:+.4f},  Δ = {disc:+.4f}")
+        print(f"    λ₁ = {lam1:+.4f},  λ₂ = {lam2:+.4f}")
+        print(f"    → {kind}")
+    print("=" * 60 + "\n")
 
 
 parameter_sets = [
@@ -177,18 +257,46 @@ for params in parameter_sets:
         save_path=f"animation_{safe_label}.gif",
     )
 
+    c = estimate_wave_velocity(
+        initialize_ramp(L, u0, xi0, dx)[1], steps, dx, dt, rho, q, D, xi, u0 / 2
+    )
+    print(f"Estimated wave velocity c for {label}: {c:.4f}")
+
+    classify_fixed_points(c, rho, q, D)
+
     u = simulate_population(u_init.copy(), steps, dx, dt, rho, q, D)
     du_dxi = compute_derivative(u, dx)
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    # Wave profile
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     axes[0].plot(xi, u, label=label)
     axes[0].set_xlabel("Position (ξ)")
     axes[0].set_ylabel("Population Density (u)")
     axes[0].set_title("Wave Profile")
     axes[0].legend()
-    # Phase plane
-    axes[1].plot(u, du_dxi, label=label)
+    u_min, u_max = min(np.min(u) - 0.5, -0.5), max(np.max(u) + 0.5, q * 1.1)
+    v_min, v_max = np.min(du_dxi) - 0.5, np.max(du_dxi) + 0.5
+    v_span = max(abs(v_min), abs(v_max), 1.0)
+    if c is not None:
+        phase_plane_streamplot(
+            axes[1],
+            c,
+            rho,
+            q,
+            D,
+            u_range=(u_min, u_max),
+            v_range=(-v_span, v_span),
+        )
+    axes[1].plot(u, du_dxi, "k-", lw=2, label=label, zorder=4)
+    n_arrows = 8
+    indices = np.linspace(0, len(u) - 2, n_arrows, dtype=int)
+    for idx in indices:
+        axes[1].annotate(
+            "",
+            xytext=(u[idx], du_dxi[idx]),
+            xy=(u[idx + 1], du_dxi[idx + 1]),
+            arrowprops=dict(arrowstyle="->", color="k", lw=2),
+            zorder=5,
+        )
     axes[1].set_xlabel("u")
     axes[1].set_ylabel("du/dξ")
     axes[1].set_title("Phase Plane")
@@ -198,12 +306,6 @@ for params in parameter_sets:
         f"wave_phase_{label.replace('$', '').replace('\\', '').replace('^*', '').replace('=', '').replace(',', '').replace(' ', '').replace('_', '')}.png"
     )
     plt.close(fig)
-
-    # Estimate wave velocity c
-    c = estimate_wave_velocity(
-        initialize_ramp(L, u0, xi0, dx)[1], steps, dx, dt, rho, q, D, xi, u0 / 2
-    )
-    print(f"Estimated wave velocity c for {label}: {c:.4f}")
 
 
 # Smoothed peak initial condition cases
@@ -216,7 +318,6 @@ xi0_peak = 50
 for case in peak_cases:
     xi, u_init = initialize_peak(L, case["u0"], xi0_peak, dx)
 
-    # Animate the simulation
     safe_label = sanitize_filename(case["label"])
     animate_simulation(
         xi,
@@ -232,16 +333,3 @@ for case in peak_cases:
         interval=50,
         save_path=f"animation_{safe_label}.gif",
     )
-
-    # Static final plot
-    sol = simulate_population(u_init.copy(), steps, dx, dt, rho, q, D)
-    du_dxi = compute_derivative(sol, dx)
-
-    plt.figure(figsize=(8, 4))
-    plt.plot(xi, sol, label=case["label"])
-    plt.xlabel("Position (ξ)")
-    plt.ylabel("Population Density (u)")
-    plt.title(f"Wave Profile for {case['label']} (Peak Initial Condition)")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
