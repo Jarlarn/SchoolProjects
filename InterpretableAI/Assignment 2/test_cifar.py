@@ -5,7 +5,7 @@ from keras.models import load_model
 import tensorflow as tf
 
 # Load model and data
-model = load_model("cifar_cnn_model.h5")
+model = load_model("cifar_cnn_model.keras")
 (_, _), (cifar_x_test, cifar_y_test) = tf.keras.datasets.cifar10.load_data()
 cifar_x_test = cifar_x_test.astype("float32")
 
