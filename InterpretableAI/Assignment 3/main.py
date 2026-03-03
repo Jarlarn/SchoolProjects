@@ -4,9 +4,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from peft import LoraConfig, get_peft_model
 
 # ============================================================
-# Step 1: Load the data
-# Each line in the file is: label<TAB>review text
-# Labels: 0 = negative review, 1 = positive review
+# Process data
 # ============================================================
 
 
@@ -31,17 +29,14 @@ print(f"Validation samples: {len(val_texts)}")
 print(f"Test samples: {len(test_texts)}")
 
 # ============================================================
-# Step 2: Set up DeBERTa-v3 with LoRA fine-tuning
-# - Load pretrained tokenizer + model
-# - Apply LoRA so we only train a small number of parameters
-# - Single classification head (default from AutoModelForSequenceClassification)
+# Set up model and apply lora to it
 # ============================================================
 
 MODEL_NAME = "microsoft/deberta-v3-base"
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
 
-# Apply LoRA: only fine-tune small adapter matrices instead of all parameters
+# https://www.kaggle.com/code/verifyitisyou/fine-tuning-deberta-large-with-lora-adapter
 lora_config = LoraConfig(
     r=8,
     lora_alpha=16,
@@ -56,7 +51,7 @@ val_encodings = tokenizer(val_texts, truncation=True, padding=True, max_length=5
 test_encodings = tokenizer(test_texts, truncation=True, padding=True, max_length=512)
 
 
-# Simple dataset class to wrap tokenized data
+# dataset class to wrap tokenized data
 class ReviewDataset(Dataset):
     def __init__(self, encodings, labels):
         self.encodings = encodings
@@ -96,7 +91,6 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 num_epochs = 3
 
 for epoch in range(num_epochs):
-    # Train
     model.train()
     total_loss = 0
     for i, batch in enumerate(train_loader):

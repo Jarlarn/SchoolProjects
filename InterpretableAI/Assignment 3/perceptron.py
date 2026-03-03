@@ -50,7 +50,6 @@ def build_vocabulary(texts, n_max, c_min):
         ngrams = get_ngrams(text, n_max)
         counts.update(ngrams)
 
-    # Only keep n-grams with count >= c_min
     vocab = {}
     idx = 0
     for ngram, count in counts.items():
