@@ -86,7 +86,8 @@ def build_and_train(num_units, window_size, X_train, y_train, X_val, y_val):
 
 unit_options = [8, 16, 32, 64]
 
-best_rmse = float("inf")
+
+best_val_rmse = float("inf")
 best_units = None
 best_model = None
 best_pred = None
@@ -97,18 +98,22 @@ for num_units in unit_options:
         num_units, window_size, X_train, y_train, X_val, y_val
     )
 
-    # Predict on test set
-    test_pred = model.predict(X_test).flatten()
-    rmse = np.sqrt(np.mean((y_test - test_pred) ** 2))
-    print(f"LSTM ({num_units} units) - Test RMSE: {rmse:.4f}")
+    # Predict on validation set
+    val_pred = model.predict(X_val).flatten()
+    val_rmse = np.sqrt(np.mean((y_val - val_pred) ** 2))
+    print(f"LSTM ({num_units} units) - Validation RMSE: {val_rmse:.4f}")
 
-    if rmse < best_rmse:
-        best_rmse = rmse
+    if val_rmse < best_val_rmse:
+        best_val_rmse = val_rmse
         best_units = num_units
         best_model = model
-        best_pred = test_pred
 
-print(f"\nBest LSTM: {best_units} units with Test RMSE: {best_rmse:.4f}")
+# After selecting the best model, evaluate on test set
+best_pred = best_model.predict(X_test).flatten()
+test_rmse = np.sqrt(np.mean((y_test - best_pred) ** 2))
+print(
+    f"\nBest LSTM: {best_units} units with Validation RMSE: {best_val_rmse:.4f} and Test RMSE: {test_rmse:.4f}"
+)
 
 # ============================================================
 # Plot: test data vs best LSTM prediction
